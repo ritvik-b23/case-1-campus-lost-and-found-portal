@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { MapPin, Calendar, User, Tag } from 'lucide-react';
+import { MapPin, Calendar, User, Tag, Trash2 } from 'lucide-react';
 import type { Item } from '@/lib/types';
 import { formatDate, getCategoryIcon, getCategoryPlaceholder, getTypeColor, cn } from '@/lib/utils';
 import StatusBadge from './StatusBadge';
@@ -10,9 +10,10 @@ interface ItemCardProps {
   item: Item;
   currentUserId?: string;
   onClaim?: (item: Item) => void;
+  onDelete?: (item: Item) => void;
 }
 
-export default function ItemCard({ item, currentUserId, onClaim }: ItemCardProps) {
+export default function ItemCard({ item, currentUserId, onClaim, onDelete }: ItemCardProps) {
   const isOwner  = currentUserId && item.posted_by_user_id === currentUserId;
   const canClaim = !isOwner && item.status === 'open' && currentUserId;
   const typeColor = getTypeColor(item.type);
@@ -103,7 +104,13 @@ export default function ItemCard({ item, currentUserId, onClaim }: ItemCardProps
             </button>
           )}
           {isOwner && (
-            <span className="flex-1 text-center text-xs text-slate-400 py-2">Your post</span>
+            <button
+              onClick={() => onDelete?.(item)}
+              className="flex items-center justify-center gap-1 flex-1 text-xs font-semibold text-red-600 border border-red-200 hover:bg-red-50 py-2 rounded-xl transition-colors"
+              aria-label={`Delete ${item.title}`}
+            >
+              <Trash2 className="w-3.5 h-3.5" /> Delete
+            </button>
           )}
         </div>
       </div>

@@ -15,7 +15,7 @@ export const DEFAULT_FILTERS: Filters = {
   search: '',
   type: 'all',
   category: '',
-  status: 'all',
+  status: 'open',
 };
 
 interface SearchAndFiltersProps {

@@ -34,10 +34,15 @@ export default function HomePage() {
   const [claimTarget, setClaimTarget] = useState<Item | null>(null);
   const [loading,     setLoading]     = useState(true);
 
-  // Auth guard
+  // Auth guard — wait for session check before rendering
+  const [authChecked, setAuthChecked] = useState(false);
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) router.replace('/login');
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) {
+        router.replace('/login');
+      } else {
+        setAuthChecked(true);
+      }
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -70,12 +75,13 @@ export default function HomePage() {
   }, [supabase]);
 
   useEffect(() => {
+    if (!authChecked) return;
     (async () => {
       await loadProfile();
       await loadItems();
       setLoading(false);
     })();
-  }, [loadProfile, loadItems]);
+  }, [authChecked, loadProfile, loadItems]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -122,6 +128,13 @@ export default function HomePage() {
     if (profile) await loadClaims(profile, items);
   }
 
+  async function handleDeleteItem(item: Item) {
+    if (!confirm(`Delete "${item.title}"? This cannot be undone.`)) return;
+    await supabase.from('claims').delete().eq('item_id', item.id);
+    await supabase.from('items').delete().eq('id', item.id);
+    await loadItems();
+  }
+
   async function handleReject(claim: Claim) {
     await supabase.from('claims').update({ status: 'rejected', reviewed_at: new Date().toISOString() }).eq('id', claim.id);
     const remaining = claims.filter((c) => c.item_id === claim.item_id && c.id !== claim.id && c.status === 'pending');
@@ -140,6 +153,14 @@ export default function HomePage() {
     { id: 'matches', label: 'Matches', icon: <Sparkles className="w-4 h-4" /> },
     { id: 'claims',  label: 'Claims',  icon: <Inbox className="w-4 h-4" /> },
   ];
+
+  if (!authChecked) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 pb-20 md:pb-0">
@@ -185,7 +206,7 @@ export default function HomePage() {
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {filteredItems.map((item) => (
-                  <ItemCard key={item.id} item={item} currentUserId={profile?.id} onClaim={setClaimTarget} />
+                  <ItemCard key={item.id} item={item} currentUserId={profile?.id} onClaim={setClaimTarget} onDelete={handleDeleteItem} />
                 ))}
               </div>
             )}
