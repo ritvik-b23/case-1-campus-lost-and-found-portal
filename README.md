@@ -1,36 +1,110 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# FindIt Campus — Lost & Found Portal
 
-## Getting Started
+A production-ready campus lost-and-found web application built as an interview case study for Infinia.
 
-First, run the development server:
+## Tech Stack
 
+| Layer | Technology |
+|-------|-----------|
+| Framework | Next.js 16 (App Router, TypeScript) |
+| Styling | Tailwind CSS v4 |
+| Database | Supabase (PostgreSQL + RLS) |
+| Authentication | Google OAuth via Supabase Auth |
+| File Storage | Supabase Storage (`item-images` bucket) |
+| Email | Resend (transactional notifications) |
+| Testing | Vitest + jsdom |
+| Icons | Lucide React |
+
+## Case Study Requirements → Implementation Mapping
+
+| Requirement | Implementation |
+|-------------|---------------|
+| Users can report lost/found items | `ItemForm` component with Supabase Storage photo upload |
+| Browse and search the feed | `SearchAndFilters` + `ItemCard` components, real-time Supabase queries |
+| Smart item matching | `lib/matching.ts` — rule-based scoring (category, location, date, keywords, color, brand) |
+| Claim workflow | `ClaimModal` → Supabase `claims` table → email via Resend |
+| Notifications | `app/api/notify/route.ts` — claim submitted / approved / rejected emails |
+| Authentication | Google OAuth → `profiles` table auto-upsert in OAuth callback |
+| Mobile responsive | BottomNav for mobile, responsive grid layout |
+| Seed data | `scripts/seed.ts` — 14 realistic campus items |
+
+## Local Development Setup
+
+### 1. Prerequisites
+- Node.js 18+
+- A Supabase project (https://supabase.com)
+- A Resend account (https://resend.com)
+- Google OAuth credentials (via Supabase Dashboard → Auth → Providers → Google)
+
+### 2. Clone and install
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone <repo-url>
+cd case-1-campus-lost-and-found-portal
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 3. Configure environment variables
+Copy `.env.local.example` to `.env.local` and fill in your values:
+```bash
+cp .env.local.example .env.local
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 4. Set up the database
+Run `supabase/migrations/001_initial.sql` in your Supabase SQL editor.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 5. Configure Supabase Storage
+Create a public bucket named `item-images` in your Supabase project dashboard.
 
-## Learn More
+### 6. Seed demo data (optional)
+```bash
+npm run seed
+```
 
-To learn more about Next.js, take a look at the following resources:
+### 7. Run the development server
+```bash
+npm run dev
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Open http://localhost:3000
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Available Scripts
 
-## Deploy on Vercel
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start development server |
+| `npm run build` | Production build |
+| `npm run lint` | ESLint check |
+| `npm test` | Run Vitest unit tests |
+| `npm run seed` | Seed demo data to Supabase |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Project Structure
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+app/
+  page.tsx              # Main feed (tabs: Feed / Post / Matches / Claims)
+  layout.tsx            # Root layout with fonts and metadata
+  globals.css           # Tailwind v4 + CSS custom properties
+  login/page.tsx        # Google OAuth sign-in
+  auth/callback/route.ts
+  api/notify/route.ts   # Resend email notification endpoint
+  item/[id]/page.tsx    # Item detail page
+
+components/             # AppHeader, BottomNav, ItemCard, ItemForm,
+                        # ItemDetail, ClaimModal, MatchCard,
+                        # SearchAndFilters, StatusBadge, EmptyState
+
+lib/
+  types.ts / matching.ts / validation.ts / utils.ts / seed.ts
+  supabase/client.ts / server.ts / middleware.ts
+
+supabase/migrations/    # 001_initial.sql (schema + RLS)
+scripts/seed.ts         # Demo data seeder
+tests/                  # matching.test.ts, validation.test.ts
+```
+
+## Further Reading
+
+- [Architecture Decisions](docs/DECISIONS.md)
+- [Demo Script](docs/DEMO_SCRIPT.md)
+- [Submission Notes](docs/SUBMISSION_NOTES.md)
+- [Future Improvements](docs/FUTURE_IMPROVEMENTS.md)

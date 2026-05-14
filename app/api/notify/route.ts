@@ -1,14 +1,13 @@
 import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 export type NotifyEvent =
   | { type: 'claim_submitted'; posterEmail: string; posterName: string; itemTitle: string; claimantName: string; itemId: string }
   | { type: 'claim_approved';  claimantEmail: string; claimantName: string; itemTitle: string; itemId: string }
   | { type: 'claim_rejected';  claimantEmail: string; claimantName: string; itemTitle: string; itemId: string };
 
 export async function POST(request: Request) {
+  const resend = new Resend(process.env.RESEND_API_KEY);
   try {
     const event = (await request.json()) as NotifyEvent;
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';

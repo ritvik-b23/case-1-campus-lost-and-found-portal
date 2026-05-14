@@ -1,5 +1,7 @@
 'use client';
 
+export const dynamic = 'force-dynamic';
+
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { LayoutGrid, PlusCircle, Sparkles, Inbox, CheckCircle, XCircle } from 'lucide-react';
@@ -76,6 +78,7 @@ export default function HomePage() {
   }, [loadProfile, loadItems]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (profile && items.length >= 0) loadClaims(profile, items);
   }, [profile, items, loadClaims]);
 
