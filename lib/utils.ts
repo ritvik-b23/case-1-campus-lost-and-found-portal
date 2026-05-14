@@ -81,7 +81,7 @@ export function getCategoryPlaceholder(category: string): string {
     <text x="200" y="140" font-size="72" text-anchor="middle" dominant-baseline="middle" fill="${stroke}">${icon}</text>
     <text x="200" y="210" font-size="18" text-anchor="middle" fill="${stroke}" font-family="sans-serif">${category}</text>
   </svg>`;
-  return `data:image/svg+xml;base64,${btoa(svg)}`;
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
 }
 
 export function daysBetween(a: string, b: string): number {
