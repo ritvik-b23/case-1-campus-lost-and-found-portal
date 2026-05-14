@@ -5,8 +5,8 @@ export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    process.env.NEXT_PUBLIC_SUPABASE_URL ?? '',
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '',
     {
       cookies: {
         getAll() {
@@ -25,25 +25,10 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  // Refresh session — do not add logic between createServerClient and getUser
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  // Protect all routes except login and auth callback
-  const { pathname } = request.nextUrl;
-  const isPublicPath =
-    pathname.startsWith('/login') ||
-    pathname.startsWith('/auth') ||
-    pathname.startsWith('/_next') ||
-    pathname.startsWith('/favicon') ||
-    pathname.startsWith('/api');
-
-  if (!user && !isPublicPath) {
-    const url = request.nextUrl.clone();
-    url.pathname = '/login';
-    return NextResponse.redirect(url);
-  }
+  // Refresh the session token — keeps auth cookies up to date.
+  // Auth redirects are handled client-side in each page to avoid
+  // cookie timing issues for new users after OAuth callback.
+  await supabase.auth.getUser();
 
   return supabaseResponse;
 }
