@@ -12,10 +12,12 @@ export default function LoginPage() {
   const router = useRouter();
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session) router.replace('/');
     });
-  }, [supabase, router]);
+    return () => subscription.unsubscribe();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function handleGoogleSignIn() {
     await supabase.auth.signInWithOAuth({

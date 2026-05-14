@@ -34,16 +34,18 @@ export default function HomePage() {
   const [claimTarget, setClaimTarget] = useState<Item | null>(null);
   const [loading,     setLoading]     = useState(true);
 
-  // Auth guard — wait for session check before rendering
+  // Auth guard — onAuthStateChange fires with INITIAL_SESSION on mount,
+  // so it reliably detects the session even after a fresh OAuth redirect.
   const [authChecked, setAuthChecked] = useState(false);
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) {
-        router.replace('/login');
-      } else {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session) {
         setAuthChecked(true);
+      } else if (event === 'INITIAL_SESSION' || event === 'SIGNED_OUT') {
+        router.replace('/login');
       }
     });
+    return () => subscription.unsubscribe();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
