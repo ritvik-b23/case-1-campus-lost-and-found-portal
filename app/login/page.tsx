@@ -2,11 +2,20 @@
 
 export const dynamic = 'force-dynamic';
 
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { MapPin } from 'lucide-react';
 
 export default function LoginPage() {
   const supabase = createClient();
+  const router = useRouter();
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) router.replace('/');
+    });
+  }, [supabase, router]);
 
   async function handleGoogleSignIn() {
     await supabase.auth.signInWithOAuth({
