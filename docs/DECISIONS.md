@@ -1,73 +1,34 @@
-# Architecture Decisions
+# Decisions Log — Case 1
 
-## 1. Database: Supabase (PostgreSQL) vs. LocalStorage
+## Assumptions I made
 
-| Factor | LocalStorage | Supabase PostgreSQL |
-|--------|-------------|---------------------|
-| Persistence | Browser-only, clears on device change | Server-side, survives any device |
-| Multi-user | No — each user sees only their own data | Yes — shared across all users |
-| Querying | Manual JS filtering | Full SQL, indexes, JOIN |
-| Auth integration | Manual token storage | Built-in JWT + Row Level Security |
+1. Students need a fast, mobile-first posting flow — because a lost-and-found report is time-sensitive; the sooner an item is posted, the more likely a match happens.
+2. A rule-based matching system is acceptable for a prototype — because the matching criteria (category, location, date, keywords, color, brand) are structured and known upfront, and the results are easy to explain to the user.
+3. Supabase is acceptable as the database for this prototype — because it gives real multi-user PostgreSQL persistence with Row Level Security and auth without building a custom backend.
+4. Netlify is acceptable for frontend deployment — because it is fast to set up for a Next.js static/SSR site and has a generous free tier suitable for a demo.
+5. Google OAuth is a reasonable stand-in for campus SSO — because most university students already have a Google account tied to their institution, and it removes friction compared to email/password registration.
 
-**Decision:** Supabase. A lost-and-found portal only makes sense when users can see each other's items. LocalStorage would be a toy prototype. Supabase gave us a real PostgreSQL database with RLS policies in <30 minutes of setup.
+## Trade-offs
 
----
+| Choice | Alternative | Why I picked this |
+|---|---|---|
+| Supabase (managed PostgreSQL + RLS) | Custom Postgres server or full backend API | Supabase gives multi-user persistence, auth, storage, and RLS in one service; building a custom backend would take much longer without adding value for a prototype |
+| Netlify | Vercel | Both work well with Next.js; Netlify was chosen for familiarity — either would be fine |
+| Rule-based matching engine | ML embeddings / image similarity | Rule-based scoring is immediately explainable ("Same category", "Both mention Library") and requires no training data or vector infrastructure; ML can be layered on later |
+| Simple claim approval flow (poster approves/rejects) | Fully verified identity workflow with email OTP | A full verification flow adds significant complexity; the claim + approval model is sufficient to demonstrate the workflow for a prototype |
+| Social-app-style feed UI | Traditional admin form layout | A feed-like design (inspired by mobile social apps) is faster to scan and more likely to be used under time pressure than a table-heavy admin interface |
 
-## 2. Authentication: Google OAuth vs. Email/Password vs. No Auth
+## What I de-scoped and why
 
-| Factor | No Auth | Email/Password | Google OAuth |
-|--------|---------|---------------|--------------|
-| Barrier to entry | None | Medium (register + verify) | Low (1-click) |
-| Campus fit | Poor — anyone can impersonate | OK | Good — campus users have Google accounts |
-| Implementation time | — | High (password hashing, reset flows) | Low (Supabase handles it) |
-| Accountability | None | Moderate | High (tied to real Google account) |
+- **College SSO / email domain restriction** — implementing real university SSO (SAML, OIDC) or restricting OAuth to a specific email domain requires institutional credentials and DNS access; Google OAuth is a practical stand-in for a demo.
+- **Image similarity matching** — perceptual hash or CLIP-based image comparison would meaningfully improve match quality for items with photos, but it requires a model inference step and was out of scope for the time box.
+- **Admin moderation panel** — a real deployment needs staff to remove inappropriate posts and handle disputes; this was cut to keep the scope focused on the student-facing flow.
+- **Push / WhatsApp notifications** — Resend handles transactional email for claim events; in-app push or WhatsApp alerts for automatic match detection would add noticeable value but were cut for time.
+- **Privacy / RLS hardening** — the current RLS policies are functional for a prototype but have not been audited against edge cases (e.g., mass enumeration, claim spam).
 
-**Decision:** Google OAuth via Supabase. Students already have Google accounts through their university. One-click sign-in removes friction while still providing identity. Supabase's `@supabase/ssr` package handles the OAuth handshake and session cookie refresh transparently.
+## What I'd do differently with another day
 
----
-
-## 3. Email Notifications: Resend vs. Nodemailer/SMTP vs. No Email
-
-| Factor | No Email | Nodemailer/SMTP | Resend |
-|--------|----------|----------------|--------|
-| Deliverability | — | Poor (SPF/DKIM config required) | High (pre-configured) |
-| Dev experience | — | Verbose config | Clean TypeScript SDK |
-| Free tier | — | Self-hosted infra needed | 3,000 emails/month free |
-| React templates | — | No | Yes (optional) |
-
-**Decision:** Resend. It provides a dead-simple REST API with a TypeScript SDK. The sandbox `onboarding@resend.dev` sender works immediately without domain verification, making it ideal for a demo/case study that must run out of the box.
-
----
-
-## 4. File Storage: Supabase Storage vs. Base64 in DB vs. Cloudinary
-
-| Factor | Base64 in DB | Cloudinary | Supabase Storage |
-|--------|-------------|-----------|-----------------|
-| DB bloat | Severe (images are large) | None | None |
-| Extra service | No | Yes (another free account) | No (same Supabase project) |
-| Transforms | No | Yes (CDN, resize) | Basic (size limits only) |
-| Setup friction | None | Medium | Low |
-
-**Decision:** Supabase Storage (`item-images` public bucket). Keeps everything in one service, avoids DB bloat, and public bucket URLs are directly embeddable in `<img>` tags with no extra auth.
-
----
-
-## 5. Matching Algorithm: Rule-Based vs. ML/Embeddings
-
-| Factor | ML / Vector Embeddings | Rule-Based Scoring |
-|--------|----------------------|-------------------|
-| Explainability | Low (black box) | High (score reasons shown to user) |
-| Infrastructure | Vector DB, embedding model | None |
-| Cold start | Needs training data | Works immediately |
-| Accuracy for structured data | Overkill | Sufficient (category/location/date are structured) |
-
-**Decision:** Rule-based scoring. The matching criteria for lost-and-found items are well-understood and structured: same category, same location, close dates, overlapping keywords, matching color/brand. A rule-based approach produces a score with human-readable reasons ("Same category", "Similar location"), which is far more useful for users than an opaque similarity score. This can be upgraded to embeddings later if needed.
-
----
-
-## 6. Seed Data: `posted_by_user_id = null`
-
-Seed items are posted with `posted_by_user_id = null` and explicit `contact_name`/`contact_email` fields. This means:
-- They appear in the feed for all users without requiring any real poster account
-- New users logging in for the first time can immediately see a populated feed
-- RLS policies allow SELECT by all users but restrict UPDATE/DELETE to the owner — seed items with null owner cannot be accidentally modified by authenticated users
+- Add email domain restriction to the OAuth callback so only `@university.edu` addresses can sign in, making the campus-specific use case concrete.
+- Build a lightweight admin page so a moderator can hide or delete posts without touching the database directly.
+- Implement automatic match notifications: when a new item is posted and a strong match (score ≥ 70) already exists, send an email to the relevant poster immediately rather than waiting for them to visit the Matches tab.
+- Write integration tests against a local Supabase instance (using `supabase start`) to cover the claim approval flow end-to-end, not only the unit-level matching logic.

@@ -1,103 +1,51 @@
-# FindIt Campus — Lost & Found Portal
+# Case 1: Campus Lost & Found Portal
 
-A production-ready campus lost-and-found web application built as an interview case study for Infinia.
+**Live demo:** https://finditcampus.netlify.app/
+**Repo:** https://github.com/ritvik-b23/case-1-campus-lost-and-found-portal
+**Demo video:** https://drive.google.com/file/d/1KsWnkjSvNYNKdrEA6H-DGP4H_JJns6cY/view?usp=sharing
 
-## Tech Stack
+## What this is
 
-| Layer | Technology |
-|-------|-----------|
-| Framework | Next.js 16 (App Router, TypeScript) |
-| Styling | Tailwind CSS v4 |
-| Database | Supabase (PostgreSQL + RLS) |
-| Authentication | Google OAuth via Supabase Auth |
-| File Storage | Supabase Storage (`item-images` bucket) |
-| Email | Resend (transactional notifications) |
-| Testing | Vitest + jsdom |
-| Icons | Lucide React |
+FindIt Campus is a mobile-first lost-and-found portal for university students to post lost or found items, browse a searchable feed, and see likely matches based on category, location, date, and item details. Students can submit claims on found items and the original poster can approve or reject them.
 
-## Case Study Requirements → Implementation Mapping
+## How to run locally
 
-| Requirement | Implementation |
-|-------------|---------------|
-| Users can report lost/found items | `ItemForm` component with Supabase Storage photo upload |
-| Browse and search the feed | `SearchAndFilters` + `ItemCard` components, real-time Supabase queries |
-| Smart item matching | `lib/matching.ts` — rule-based scoring (category, location, date, keywords, color, brand) |
-| Claim workflow | `ClaimModal` → Supabase `claims` table → email via Resend |
-| Notifications | `app/api/notify/route.ts` — claim submitted / approved / rejected emails |
-| Authentication | Google OAuth → `profiles` table auto-upsert in OAuth callback |
-| Mobile responsive | BottomNav for mobile, responsive grid layout |
-| Seed data | `scripts/seed.ts` — 14 realistic campus items |
+1. `git clone <ADD_GITHUB_REPO_URL>`
+2. `cd case-1-campus-lost-and-found-portal`
+3. `npm install`
+4. Create a `.env.local` file with your Supabase credentials:
+   ```
+   NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+   ```
+   Run `supabase/migrations/001_initial.sql` in your Supabase SQL editor to set up the schema.
+5. `npm run dev`
+6. Open `http://localhost:3000`
 
-## Local Development Setup
+## Stack
 
-### 1. Prerequisites
-- Node.js 18+
-- A Supabase project (https://supabase.com)
-- A Resend account (https://resend.com)
-- Google OAuth credentials (via Supabase Dashboard → Auth → Providers → Google)
+- **Next.js 16 (App Router, TypeScript)** — full-stack framework; server components keep Supabase calls off the client
+- **Tailwind CSS v4** — utility-first styling; fast to iterate on a mobile-first layout
+- **Supabase (PostgreSQL + RLS)** — persistent multi-user database with Row Level Security; avoids building a custom backend
+- **Google OAuth via Supabase Auth** — one-click sign-in using the campus Google account students already have
+- **Supabase Storage** — image uploads in the same project as the database; no extra service needed
+- **Resend** — simple transactional email API for claim notifications; works out of the box without domain configuration
+- **Vitest** — fast unit tests for the matching engine and validation logic
 
-### 2. Clone and install
-```bash
-git clone <repo-url>
-cd case-1-campus-lost-and-found-portal
-npm install
-```
+## What's NOT done
 
-### 3. Configure environment variables
-Copy `.env.local.example` to `.env.local` and fill in your values:
-```bash
-cp .env.local.example .env.local
-```
+- No college SSO or email OTP — authentication is Google OAuth only; a real campus deployment would restrict sign-in to the university email domain
+- No advanced image similarity — matching is rule-based (category, location, date, keywords, color, brand); perceptual hash or CLIP-based matching was out of scope
+- No admin moderation panel — there is no way for staff to remove inappropriate posts or review flagged items
+- Production privacy and RLS policies would need a security review before a real campus launch
 
-### 4. Set up the database
-Run `supabase/migrations/001_initial.sql` in your Supabase SQL editor.
+## In production, I would also add
 
-### 5. Configure Supabase Storage
-Create a public bucket named `item-images` in your Supabase project dashboard.
-
-### 6. Seed demo data (optional)
-```bash
-npm run seed
-```
-
-### 7. Run the development server
-```bash
-npm run dev
-```
-
-Open http://localhost:3000
-
-## Available Scripts
-
-| Command | Description |
-|---------|-------------|
-| `npm run dev` | Start development server |
-| `npm run build` | Production build |
-| `npm run lint` | ESLint check |
-| `npm test` | Run Vitest unit tests |
-| `npm run seed` | Seed demo data to Supabase |
-
-## Project Structure
-
-```
-app/
-  page.tsx              # Main feed (tabs: Feed / Post / Matches / Claims)
-  layout.tsx            # Root layout with fonts and metadata
-  globals.css           # Tailwind v4 + CSS custom properties
-  login/page.tsx        # Google OAuth sign-in
-  auth/callback/route.ts
-  api/notify/route.ts   # Resend email notification endpoint
-  item/[id]/page.tsx    # Item detail page
-
-components/             # AppHeader, BottomNav, ItemCard, ItemForm,
-                        # ItemDetail, ClaimModal, MatchCard,
-                        # SearchAndFilters, StatusBadge, EmptyState
-
-lib/
-  types.ts / matching.ts / validation.ts / utils.ts / seed.ts
-  supabase/client.ts / server.ts / middleware.ts
-
-supabase/migrations/    # 001_initial.sql (schema + RLS)
+- College SSO or email OTP restricted to the university domain
+- Cloud image storage with access controls and automatic resizing
+- Email or WhatsApp notifications when a strong match is detected automatically
+- Image similarity matching using perceptual hash or a CLIP-style embedding
+- Admin moderation dashboard and audit trail for reported or disputed items
 scripts/seed.ts         # Demo data seeder
 tests/                  # matching.test.ts, validation.test.ts
 ```
